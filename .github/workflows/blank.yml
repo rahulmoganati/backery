@@ -1,0 +1,52 @@
+
+name: Bakery Project CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Bakery Project Files
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Check required project files
+        run: |
+          set -e
+
+          for file in \
+            Default.cshtml \
+            About.cshtml \
+            Order.cshtml \
+            OrderSuccess.cshtml \
+            Web.config \
+            azuredeploy.json
+          do
+            if [ ! -f "$file" ]; then
+              echo "ERROR: Missing file: $file"
+              exit 1
+            fi
+            echo "Found: $file"
+          done
+
+      - name: Validate Azure deployment JSON
+        run: python -m json.tool azuredeploy.json > /dev/null
+
+      - name: Check project folders
+        run: |
+          test -d Content
+          test -d Images
+          test -d Scripts
+          echo "Bakery project file validation passed!"
