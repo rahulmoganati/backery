@@ -3,9 +3,11 @@ name: Bakery Project CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -20,10 +22,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Check required files
+      - name: Check required project files
         shell: bash
         run: |
           set -e
+
           for file in \
             Default.cshtml \
             About.cshtml \
@@ -32,19 +35,33 @@ jobs:
             Web.config \
             azuredeploy.json
           do
-            test -f "$file" || {
-              echo "Missing file: $file"
+            if [ ! -f "$file" ]; then
+              echo "ERROR: Missing file: $file"
               exit 1
-            }
+            fi
             echo "Found: $file"
           done
 
-      - name: Validate JSON
-        run: python -m json.tool azuredeploy.json > /dev/null
-
-      - name: Check project directories
+      - name: Diagnose Azure deployment JSON
+        shell: bash
         run: |
+          echo "Checking azuredeploy.json..."
+          if ! python -m json.tool azuredeploy.json > /dev/null; then
+            echo "JSON validation failed."
+            echo "Showing lines 60-72:"
+            nl -ba azuredeploy.json | sed -n '60,72p'
+            exit 1
+          fi
+          echo "azuredeploy.json is valid."
+
+      - name: Check project folders
+        shell: bash
+        run: |
+          set -e
           test -d Content
           test -d Images
           test -d Scripts
-          echo "Bakery project validation passed!"
+          echo "Required project folders exist."
+
+      - name: Validation successful
+        run: echo "Bakery project validation passed!"
